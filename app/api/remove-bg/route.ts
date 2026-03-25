@@ -9,38 +9,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No image provided' }, { status: 400 })
     }
 
-    const buffer = await image.arrayBuffer()
-    const base64 = Buffer.from(buffer).toString('base64')
+    console.log('Processing:', image.name, image.size)
     
-    const response = await fetch('https://api.replicate.com/v1/predictions', {
+    const localFormData = new FormData()
+    localFormData.append('image', image)
+    
+    const response = await fetch('http://43.156.142.219:5000/remove-bg', {
       method: 'POST',
-      headers: {
-        'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        version: 'fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003',
-        input: { image: `data:image/png;base64,${base64}` }
-      })
+      body: localFormData
     })
 
-    const prediction = await response.json()
-    
-    let result = prediction
-    while (result.status !== 'succeeded' && result.status !== 'failed') {
-      await new Promise(r => setTimeout(r, 1000))
-      const check = await fetch(`https://api.replicate.com/v1/predictions/${result.id}`, {
-        headers: { 'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}` }
-      })
-      result = await check.json()
-    }
-
-    if (result.status === 'failed') {
+    if (!response.ok) {
+      console.error('Local API error')
       return NextResponse.json({ error: 'Processing failed' }, { status: 500 })
     }
 
-    return NextResponse.json({ url: result.output })
+    const buffer = await response.arrayBuffer()
+    const base64 = Buffer.from(buffer).toString('base64')
+    const dataUrl = `data:image/png;base64,${base64}`
+    
+    console.log('Success!')
+    return NextResponse.json({ url: dataUrl })
   } catch (error: any) {
+    console.error('Error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
