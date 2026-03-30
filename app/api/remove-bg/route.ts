@@ -14,7 +14,9 @@ export async function POST(request: NextRequest) {
     const localFormData = new FormData()
     localFormData.append('image', image)
     
-    const response = await fetch('http://43.156.142.219:5000/remove-bg', {
+    const apiUrl = process.env.REMOVE_BG_API_URL || 'http://43.156.142.219:5000/remove-bg'
+    
+    const response = await fetch(apiUrl, {
       method: 'POST',
       body: localFormData
     })
